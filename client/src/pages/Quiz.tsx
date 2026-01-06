@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -11,6 +14,9 @@ import { CheckCircle2, XCircle, ArrowRight, RefreshCcw, Star } from 'lucide-reac
 import { Link } from 'wouter';
 
 export default function Quiz() {
+  const { user, isAuthenticated } = useAuth();
+  const saveResultMutation = trpc.quiz.saveResult.useMutation();
+
   const [step, setStep] = useState<'intro' | 'familiarity' | 'quiz' | 'result'>('intro');
   const [familiarity, setFamiliarity] = useState<number>(3);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -54,6 +60,43 @@ export default function Quiz() {
     setShowExplanation(false);
     setTextAnswer('');
   };
+
+  const handleSaveResult = async () => {
+    if (!isAuthenticated || !user) {
+      toast.error('Please log in to save your results');
+      return;
+    }
+
+    try {
+      // Convert answers object keys to strings for API
+      const answersForApi = Object.entries(answers).reduce(
+        (acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, any>
+      );
+
+      await saveResultMutation.mutateAsync({
+        familiarityLevel: familiarity,
+        score,
+        totalQuestions: quizQuestions.length,
+        percentage: Math.round((score / quizQuestions.length) * 100),
+        answers: answersForApi,
+      });
+
+      toast.success('Your quiz result has been saved!');
+    } catch (error) {
+      console.error('Error saving result:', error);
+      toast.error('Failed to save your result. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    if (step === 'result') {
+      handleSaveResult();
+    }
+  }, [step]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -282,8 +325,13 @@ export default function Quiz() {
                     </p>
                   </div>
 
-                  <div className="flex gap-4 justify-center">
-                    <Button variant="outline" onClick={restartQuiz} className="h-12 px-6 rounded-xl border-white/40 hover:bg-white/50">
+                  <div className="flex gap-4 justify-center flex-wrap">
+                    <Button 
+                      variant="outline" 
+                      onClick={restartQuiz} 
+                      disabled={saveResultMutation.isPending}
+                      className="h-12 px-6 rounded-xl border-white/40 hover:bg-white/50"
+                    >
                       <RefreshCcw className="mr-2 w-4 h-4" /> Try Again
                     </Button>
                     <Link href="/">
@@ -292,6 +340,11 @@ export default function Quiz() {
                       </Button>
                     </Link>
                   </div>
+                  {!isAuthenticated && (
+                    <div className="mt-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-center text-sm text-yellow-700">
+                      <p>Sign in to save your results and track your progress!</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
