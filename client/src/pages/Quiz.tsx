@@ -67,7 +67,14 @@ export default function Quiz() {
       return;
     }
 
+    if (Object.keys(answers).length === 0) {
+      console.warn('No answers to save');
+      return;
+    }
+
     try {
+      console.log('Saving quiz result...', { familiarity, score, answers });
+      
       // Convert answers object keys to strings for API
       const answersForApi = Object.entries(answers).reduce(
         (acc, [key, value]) => {
@@ -77,7 +84,7 @@ export default function Quiz() {
         {} as Record<string, any>
       );
 
-      await saveResultMutation.mutateAsync({
+      const result = await saveResultMutation.mutateAsync({
         familiarityLevel: familiarity,
         score,
         totalQuestions: quizQuestions.length,
@@ -85,6 +92,7 @@ export default function Quiz() {
         answers: answersForApi,
       });
 
+      console.log('Quiz result saved successfully:', result);
       toast.success('Your quiz result has been saved!');
     } catch (error) {
       console.error('Error saving result:', error);
@@ -96,7 +104,7 @@ export default function Quiz() {
     if (step === 'result') {
       handleSaveResult();
     }
-  }, [step]);
+  }, [step, isAuthenticated, user, familiarity, score, answers, saveResultMutation]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">

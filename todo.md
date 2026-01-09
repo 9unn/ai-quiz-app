@@ -25,3 +25,15 @@
 - [ ] Verify data persistence
 - [ ] Test leaderboard functionality
 - [ ] Create checkpoint and deploy
+
+
+## Phase 5: Supabase Migration
+- [ ] Create Supabase project and PostgreSQL database
+- [ ] Get Supabase connection string (DATABASE_URL)
+- [ ] Update environment variables with Supabase credentials
+- [ ] Modify drizzle.config.ts for PostgreSQL
+- [ ] Update schema.ts for PostgreSQL compatibility
+- [ ] Export data from current MySQL database
+- [ ] Migrate data to Supabase PostgreSQL
+- [ ] Test database connection and queries
+- [ ] Verify all quiz data persists correctly
