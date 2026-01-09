@@ -35,9 +35,6 @@ export default function Home() {
               Start the Quiz <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </Link>
-          <Button variant="outline" size="lg" className="h-16 px-8 text-lg rounded-2xl border-white/40 bg-white/20 hover:bg-white/40 backdrop-blur-md hover:scale-105 transition-all duration-300">
-            Learn More
-          </Button>
         </div>
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
