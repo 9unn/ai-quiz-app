@@ -117,7 +117,7 @@ export default function Quiz() {
               <Card className="glass-panel border-none shadow-2xl">
                 <CardHeader className="pb-2">
                   <div className="mx-auto w-32 h-32 mb-6 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center shadow-inner border border-white/40">
-                    <img src="/images/ai-hero-glass.png" alt="AI Brain" className="w-24 h-24 object-contain drop-shadow-lg" />
+                    <img src="/images/ai-hero-glass.png" alt="AI Brain" className="w-24 h-24 object-contain drop-shadow-lg" style={{backgroundColor: '#ffffff'}} />
                   </div>
                   <CardTitle className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
                     AI Knowledge Quiz
@@ -127,9 +127,6 @@ export default function Quiz() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <p className="text-foreground/80 mb-8 leading-relaxed">
-                    Welcome to a journey through the mind of a machine. This quiz is designed for beginners to test their understanding of AI concepts in a fun and interactive way.
-                  </p>
                   <Button onClick={handleStart} size="lg" className="w-full text-lg h-14 rounded-xl shadow-lg hover:shadow-primary/25 transition-all duration-300 bg-primary hover:bg-primary/90">
                     Start Journey <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
