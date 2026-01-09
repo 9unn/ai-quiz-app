@@ -1,0 +1,13 @@
+{
+  "query": "SELECT AUTO_INCREMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='quiz_results' AND TABLE_SCHEMA=DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 32oxYpYQcvXfFAP.root --database Q3vv7PtsSLAMoYuo2sGQ8T --execute SELECT AUTO_INCREMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='quiz_results' AND TABLE_SCHEMA=DATABASE();",
+  "rows": [
+    {
+      "AUTO_INCREMENT": "120002"
+    }
+  ],
+  "messages": [],
+  "stdout": "AUTO_INCREMENT\n120002\n",
+  "stderr": "",
+  "execution_time_ms": 2126
+}
