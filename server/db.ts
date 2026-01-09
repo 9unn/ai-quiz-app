@@ -95,11 +95,17 @@ export async function saveQuizResult(userId: number | null, data: InsertQuizResu
     throw new Error("Database not available");
   }
 
+  // Get current time in Thailand timezone (UTC+7)
+  const now = new Date();
+  const utcTime = new Date(now.getTime() + now.getTimezoneOffset() * 60 * 1000);
+  const thailandTime = new Date(utcTime.getTime() + (7 * 60 * 60 * 1000));
+
   const result = await db
     .insert(quizResults)
     .values({
       ...data,
-      userId: userId || 0, // Use 0 for anonymous users
+      userId: userId || 0,
+      createdAt: thailandTime,
     })
     .$returningId();
 
