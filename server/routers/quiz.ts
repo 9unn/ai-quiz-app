@@ -5,9 +5,9 @@ import { InsertQuizResult } from "../../drizzle/schema";
 
 export const quizRouter = router({
   /**
-   * Save quiz result - requires authentication
+   * Save quiz result - allows both authenticated and anonymous users
    */
-  saveResult: protectedProcedure
+  saveResult: publicProcedure
     .input(
       z.object({
         familiarityLevel: z.number().min(1).max(5),
@@ -18,7 +18,8 @@ export const quizRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const result = await saveQuizResult(ctx.user.id, {
+      const userId = ctx.user?.id || null; // null for anonymous users
+      const result = await saveQuizResult(userId, {
         familiarityLevel: input.familiarityLevel,
         score: input.score,
         totalQuestions: input.totalQuestions,

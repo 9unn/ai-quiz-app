@@ -15,6 +15,13 @@
       "when": 1767693384699,
       "tag": "0001_nostalgic_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1767945726709,
+      "tag": "0002_equal_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

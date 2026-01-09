@@ -20,7 +20,13 @@
 - [ ] Create leaderboard page
 - [x] Add authentication checks to quiz flow
 
-## Phase 4: Testing & Deployment
+## Phase 4: Anonymous Quiz Support
+- [ ] Allow users to take quiz without sign in
+- [ ] Show results immediately after completion
+- [ ] Remove authentication requirement from Quiz page
+- [ ] Test anonymous quiz flow
+
+## Phase 5: Testing & Deployment
 - [ ] Test quiz flow end-to-end
 - [ ] Verify data persistence
 - [ ] Test leaderboard functionality

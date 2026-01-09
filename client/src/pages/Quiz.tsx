@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,6 @@ import { CheckCircle2, XCircle, ArrowRight, RefreshCcw, Star } from 'lucide-reac
 import { Link } from 'wouter';
 
 export default function Quiz() {
-  const { user, isAuthenticated } = useAuth();
   const saveResultMutation = trpc.quiz.saveResult.useMutation();
 
   const [step, setStep] = useState<'intro' | 'familiarity' | 'quiz' | 'result'>('intro');
@@ -24,6 +22,7 @@ export default function Quiz() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [score, setScore] = useState(0);
   const [textAnswer, setTextAnswer] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentQuestion = quizQuestions[currentQuestionIndex];
 
@@ -61,21 +60,11 @@ export default function Quiz() {
     setTextAnswer('');
   };
 
-  const handleSaveResult = async () => {
-    if (!isAuthenticated || !user) {
-      toast.error('Please log in to save your results');
-      return;
-    }
-
-    if (Object.keys(answers).length === 0) {
-      console.warn('No answers to save');
-      return;
-    }
-
-    try {
-      console.log('Saving quiz result...', { familiarity, score, answers });
+  // Save result when step changes to 'result'
+  useEffect(() => {
+    if (step === 'result' && Object.keys(answers).length > 0 && !isSaving) {
+      setIsSaving(true);
       
-      // Convert answers object keys to strings for API
       const answersForApi = Object.entries(answers).reduce(
         (acc, [key, value]) => {
           acc[key] = value;
@@ -84,27 +73,30 @@ export default function Quiz() {
         {} as Record<string, any>
       );
 
-      const result = await saveResultMutation.mutateAsync({
-        familiarityLevel: familiarity,
-        score,
-        totalQuestions: quizQuestions.length,
-        percentage: Math.round((score / quizQuestions.length) * 100),
-        answers: answersForApi,
-      });
-
-      console.log('Quiz result saved successfully:', result);
-      toast.success('Your quiz result has been saved!');
-    } catch (error) {
-      console.error('Error saving result:', error);
-      toast.error('Failed to save your result. Please try again.');
+      saveResultMutation.mutate(
+        {
+          familiarityLevel: familiarity,
+          score,
+          totalQuestions: quizQuestions.length,
+          percentage: Math.round((score / quizQuestions.length) * 100),
+          answers: answersForApi,
+        },
+        {
+          onSuccess: () => {
+            console.log('Quiz result saved successfully');
+            toast.success('Your quiz result has been saved!');
+          },
+          onError: (error) => {
+            console.error('Error saving result:', error);
+            toast.error('Failed to save your result. Please try again.');
+          },
+          onSettled: () => {
+            setIsSaving(false);
+          },
+        }
+      );
     }
-  };
-
-  useEffect(() => {
-    if (step === 'result') {
-      handleSaveResult();
-    }
-  }, [step, isAuthenticated, user, familiarity, score, answers, saveResultMutation]);
+  }, [step]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -251,10 +243,10 @@ export default function Quiz() {
                             className="h-14 text-lg bg-white/50 border-white/30 focus:ring-primary rounded-xl"
                             onKeyDown={(e) => e.key === 'Enter' && textAnswer && handleAnswer(textAnswer)}
                           />
-                          <Button 
-                            onClick={() => handleAnswer(textAnswer)}
+                          <Button
+                            onClick={() => textAnswer && handleAnswer(textAnswer)}
+                            className="w-full h-12 text-lg rounded-xl"
                             disabled={!textAnswer}
-                            className="w-full h-12 rounded-xl"
                           >
                             Submit Answer
                           </Button>
@@ -262,32 +254,38 @@ export default function Quiz() {
                       )}
                     </div>
                   ) : (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-white/40 rounded-xl p-6 border border-white/40"
+                      className="space-y-6"
                     >
-                      <div className="flex items-center gap-3 mb-4">
-                        {answers[currentQuestion.id] === currentQuestion.correctAnswer || 
-                         (typeof answers[currentQuestion.id] === 'string' && 
-                          answers[currentQuestion.id].toLowerCase().trim() === (currentQuestion.correctAnswer as string).toLowerCase()) ? (
-                          <div className="text-green-600 flex items-center gap-2 font-bold text-xl">
-                            <CheckCircle2 className="w-6 h-6" /> Correct!
-                          </div>
-                        ) : (
-                          <div className="text-destructive flex items-center gap-2 font-bold text-xl">
-                            <XCircle className="w-6 h-6" /> Incorrect
-                          </div>
-                        )}
+                      <div className={`p-6 rounded-2xl ${
+                        answers[currentQuestion.id] === currentQuestion.correctAnswer
+                          ? 'bg-green-500/20 border-2 border-green-500'
+                          : 'bg-red-500/20 border-2 border-red-500'
+                      }`}>
+                        <div className="flex items-center gap-3 mb-3">
+                          {answers[currentQuestion.id] === currentQuestion.correctAnswer ? (
+                            <>
+                              <CheckCircle2 className="w-6 h-6 text-green-600" />
+                              <span className="font-bold text-green-600">Correct!</span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-6 h-6 text-red-600" />
+                              <span className="font-bold text-red-600">Incorrect</span>
+                            </>
+                          )}
+                        </div>
+                        <p className="text-foreground/80">{currentQuestion.explanation}</p>
                       </div>
-                      <p className="text-lg text-foreground/90 mb-2 font-medium">
-                        {currentQuestion.explanation}
-                      </p>
-                      <div className="mt-6 flex justify-end">
-                        <Button onClick={nextQuestion} size="lg" className="rounded-xl px-8">
-                          {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Question' : 'See Results'} <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </div>
+
+                      <Button
+                        onClick={nextQuestion}
+                        className="w-full h-12 text-lg rounded-xl"
+                      >
+                        {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Question' : 'See Results'} <ArrowRight className="ml-2 w-5 h-5" />
+                      </Button>
                     </motion.div>
                   )}
                 </CardContent>
@@ -300,57 +298,90 @@ export default function Quiz() {
               key="result"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.1 }}
               className="text-center"
             >
-              <Card className="glass-panel border-none overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-secondary" />
-                <CardHeader className="pt-10">
-                  <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg mb-4">
-                    <Star className="w-12 h-12 fill-current" />
-                  </div>
-                  <CardTitle className="text-3xl font-bold">Quiz Completed!</CardTitle>
-                  <CardDescription className="text-lg">
-                    Here is how you performed
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-8">
-                  <div className="text-6xl font-black text-primary mb-2">
-                    {Math.round((score / quizQuestions.length) * 100)}%
-                  </div>
-                  <p className="text-muted-foreground text-lg mb-8">
-                    You got <span className="font-bold text-foreground">{score}</span> out of <span className="font-bold text-foreground">{quizQuestions.length}</span> questions correct.
-                  </p>
-                  
-                  <div className="bg-white/30 rounded-xl p-6 mb-8 text-left">
-                    <h4 className="font-bold mb-2 text-primary">Your AI Profile:</h4>
-                    <p className="text-foreground/80">
-                      {score === quizQuestions.length ? "You're an AI Expert! The machines might learn from you." :
-                       score > quizQuestions.length / 2 ? "You have a solid understanding of AI basics. Keep learning!" :
-                       "You're just getting started. The world of AI is vast and exciting!"}
-                    </p>
+              <Card className="glass-panel border-none shadow-2xl">
+                <CardHeader className="pb-4">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative w-40 h-40">
+                      <svg className="w-full h-full" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="url(#gradient)"
+                          strokeWidth="8"
+                          strokeDasharray={`${(score / quizQuestions.length) * 283} 283`}
+                          strokeLinecap="round"
+                          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+                        />
+                        <defs>
+                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="rgb(59, 130, 246)" />
+                            <stop offset="100%" stopColor="rgb(168, 85, 247)" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+                          {Math.round((score / quizQuestions.length) * 100)}%
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {score}/{quizQuestions.length}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    <Button 
-                      variant="outline" 
-                      onClick={restartQuiz} 
-                      disabled={saveResultMutation.isPending}
-                      className="h-12 px-6 rounded-xl border-white/40 hover:bg-white/50"
-                    >
-                      <RefreshCcw className="mr-2 w-4 h-4" /> Try Again
-                    </Button>
-                    <Link href="/">
-                      <Button className="h-12 px-6 rounded-xl">
-                        Back to Home
-                      </Button>
-                    </Link>
+                  <CardTitle className="text-3xl mb-2">Quiz Complete!</CardTitle>
+                  <CardDescription className="text-lg">
+                    {score === quizQuestions.length && "Perfect score! You're an AI expert!"}
+                    {score >= quizQuestions.length * 0.8 && score < quizQuestions.length && "Excellent work! You know your AI!"}
+                    {score >= quizQuestions.length * 0.6 && score < quizQuestions.length * 0.8 && "Good job! Keep learning about AI!"}
+                    {score < quizQuestions.length * 0.6 && "Keep exploring AI! There's so much to learn!"}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-6 py-8">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="p-4 rounded-xl bg-white/20">
+                      <div className="text-2xl font-bold text-primary">{score}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Correct</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white/20">
+                      <div className="text-2xl font-bold text-accent">{quizQuestions.length - score}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Incorrect</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white/20">
+                      <div className="text-2xl font-bold text-secondary-foreground">{familiarity}/5</div>
+                      <div className="text-xs text-muted-foreground mt-1">Familiarity</div>
+                    </div>
                   </div>
-                  {!isAuthenticated && (
-                    <div className="mt-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-center text-sm text-yellow-700">
-                      <p>Sign in to save your results and track your progress!</p>
+
+                  {isSaving && (
+                    <div className="p-4 rounded-xl bg-blue-500/20 border border-blue-500/50 text-sm text-blue-600">
+                      Saving your result...
                     </div>
                   )}
                 </CardContent>
+
+                <CardFooter className="flex gap-4">
+                  <Button
+                    onClick={restartQuiz}
+                    variant="outline"
+                    className="flex-1 h-12 rounded-xl"
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" /> Try Again
+                  </Button>
+                  <Link href="/">
+                    <Button className="flex-1 h-12 rounded-xl">
+                      Back to Home
+                    </Button>
+                  </Link>
+                </CardFooter>
               </Card>
             </motion.div>
           )}

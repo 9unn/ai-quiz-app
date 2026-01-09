@@ -1,6 +1,5 @@
 import { eq, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, quizResults, quizAttempts, InsertQuizResult, QuizResult } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -10,8 +9,7 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const client = postgres(process.env.DATABASE_URL);
-      _db = drizzle(client);
+      _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -70,14 +68,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    // PostgreSQL upsert using ON CONFLICT
-    await db
-      .insert(users)
-      .values(values)
-      .onConflictDoUpdate({
-        target: users.openId,
-        set: updateSet,
-      });
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
+      set: updateSet,
+    });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -96,7 +89,7 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function saveQuizResult(userId: number, data: InsertQuizResult): Promise<QuizResult> {
+export async function saveQuizResult(userId: number | null, data: InsertQuizResult): Promise<QuizResult> {
   const db = await getDb();
   if (!db) {
     throw new Error("Database not available");
@@ -106,11 +99,17 @@ export async function saveQuizResult(userId: number, data: InsertQuizResult): Pr
     .insert(quizResults)
     .values({
       ...data,
-      userId,
+      userId: userId || 0, // Use 0 for anonymous users
     })
-    .returning();
+    .$returningId();
 
-  return result[0]!;
+  const savedResult = await db
+    .select()
+    .from(quizResults)
+    .where(eq(quizResults.id, result[0].id))
+    .limit(1);
+
+  return savedResult[0]!;
 }
 
 export async function getQuizResultsByUserId(userId: number, limit: number = 10) {
